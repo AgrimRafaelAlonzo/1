@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/leaflet-omnivore@1.5.4/leaflet-omnivore.min.js"></script>
+    <script src="https://unpkg.com/leaflet.shpfile@1.1.1/leaflet.shpfile.js"></script>
+  </head>
+  <body>
+    <div id="map" style="height: 500px;"></div>
+    <input type="file" id="file-input" accept=".gpkg,.shp,.zip" />
+
+    <script>
+      var map = L.map('map').setView([51.505, -0.09], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+        maxZoom: 18,
+      }).addTo(map);
+
+      function handleFileSelect(event) {
+        var file = event.target.files[0];
+
+        if (file.name.endsWith('.gpkg')) {
+          // Load GeoPackage file
+          var reader = new FileReader();
+          reader.onload = function () {
+            var buffer = reader.result;
+            var geodata = omnivore.geopackage(buffer);
+            geodata.addTo(map);
+            map.fitBounds(geodata.getBounds());
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          // Load Shapefile or ZIP file containing Shapefile
+          var shapefile = new L.Shapefile(file, {
+            onEachFeature: function (feature, layer) {
+              if (feature.properties) {
+                layer.bindPopup(Object.keys(feature.properties).map(function (key) {
+                  return key + ': ' + feature.properties[key];
+                }).join('<br />'));
+              }
+            },
+          });
+          shapefile.addTo(map);
+          map.fitBounds(shapefile.getBounds());
+        }
+      }
+
+      $('#file-input').on('change', handleFileSelect);
+    </script>
+  </body>
+</html>
